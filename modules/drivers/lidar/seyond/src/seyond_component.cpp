@@ -105,7 +105,7 @@ void SeyondComponent::SeyondPacketCallback(const InnoDataPacket *pkt,
     frame_count_ = 0;
     scan_packet->set_table_exist(true);
     scan_packet->mutable_table()->assign(driver_ptr_->anglehv_table_.data(),
-                                         driver_ptr_->anglehv_table_.size());
+                                         driver_ptr_->anglehv_table_size_);
   }
 }
 

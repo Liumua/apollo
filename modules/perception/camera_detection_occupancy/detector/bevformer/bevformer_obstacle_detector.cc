@@ -22,11 +22,6 @@
 #include <memory>
 
 #include <cuda_runtime.h>
-#include <pcl/features/normal_3d.h>
-#include <pcl/io/pcd_io.h>
-#include <pcl/search/kdtree.h>
-#include <pcl/search/search.h>
-#include <pcl/segmentation/region_growing.h>
 
 #include "cyber/common/file.h"
 #include "cyber/common/log.h"
@@ -38,7 +33,6 @@
 #include "modules/perception/common/camera/common/util.h"
 #include "modules/perception/common/inference/utils/resize.h"
 #include "modules/perception/common/lidar/common/lidar_point_label.h"
-#include "modules/perception/common/lidar/common/pcl_util.h"
 #include "modules/perception/common/util.h"
 
 namespace apollo {
@@ -46,7 +40,6 @@ namespace perception {
 namespace camera {
 using apollo::perception::base::Blob;
 using apollo::perception::lidar::PointSemanticLabel;
-using apollo::perception::lidar::TransformToPCLXYZI;
 using base::PointF;
 
 const std::map<std::string, base::ObjectSubType> kNuScenesName2SubTypeMap = {
@@ -290,8 +283,18 @@ bool BEVFORMERObstacleDetector::ImagePreprocessGPU(
     PERF_BLOCK("stage bev resize")
     inference::ResizeGPU(tmp_image, resized_image,
                          frame->data_provider[i]->src_width(), 0, mean_bgr_[0],
-                         mean_bgr_[1], mean_bgr_[2], false, std_bgr_[0],
-                         std_bgr_[1], std_bgr_[2]);
+                         mean_bgr_[1], mean_bgr_[2], false, 1.0);
+    PERF_BLOCK_END
+    
+    // 手动添加标准差归一化，因为目标Apollo版本的ResizeGPU不支持std参数
+    PERF_BLOCK("stage bev normalize std")
+    int num_elements = resized_image->count();
+    float* data = resized_image->mutable_cpu_data();
+    for (int j = 0; j < num_elements; j += 3) {
+      data[j] /= std_bgr_[0];
+      data[j + 1] /= std_bgr_[1];  
+      data[j + 2] /= std_bgr_[2];
+    }
     PERF_BLOCK_END
 
     PERF_BLOCK("stage bev memcpy")

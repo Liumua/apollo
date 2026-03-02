@@ -61,7 +61,7 @@ bool ExternalCommandDemo::Init() {
                           CommandStatus>(
           "/apollo/external_command/command_status");
   apollo::cyber::common::GetProtoFromFile(
-      "modules/external_command/external_command_demo/conf/"
+      "/apollo/modules/external_command/external_command_demo/conf/"
       "demo_config.pb.txt",
       &demo_config_);
   return true;
@@ -302,6 +302,7 @@ void ExternalCommandDemo::SendPathFollowCommandWithLocationRecord(
           std::make_shared<apollo::external_command::PathFollowCommand>();
   std::vector<std::string> record_files =
       apollo::cyber::common::ListSubPaths(record_dir, DT_REG);
+  std::sort(record_files.begin(), record_files.end()); // Sort file names.
   std::string dir_prefix = record_dir + '/';
   for (const auto file_name : record_files) {
     ReadPathFromLocationRecord(dir_prefix + file_name,

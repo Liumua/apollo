@@ -140,6 +140,7 @@ class SeyondDriver {
  public:
   // for generic
   bool anglehv_table_init_{false};
+  uint64_t anglehv_table_size_{kInnoAngleHVTableMaxSize};
   std::vector<char> anglehv_table_;
 
  private:

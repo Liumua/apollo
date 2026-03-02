@@ -226,14 +226,15 @@ int32_t SeyondDriver::data_callback_(const InnoDataPacket *pkt) {
     return 0;
   }
 
-  if ((pkt->type == INNO_ROBINW_ITEM_TYPE_COMPACT_POINTCLOUD) &&
-      (!anglehv_table_init_)) {
-    anglehv_table_.resize(sizeof(InnoAngleHVTable) + sizeof(InnoDataPacket));
-    int ret = inno_lidar_get_anglehv_table(
-        handle_, reinterpret_cast<InnoDataPacket *>(anglehv_table_.data()));
+  if (CHECK_CO_SPHERE_POINTCLOUD_DATA(pkt->type) && (!anglehv_table_init_)) {
+    anglehv_table_.resize(kInnoAngleHVTableMaxSize);
+    int32_t ret = inno_lidar_get_anglehv_table(
+            handle_, reinterpret_cast<InnoDataPacket *>(anglehv_table_.data()));
     if (ret == 0) {
       anglehv_table_init_ = true;
-      inno_log_info("Get RobinW Compact Table");
+      InnoDataPacket *table_pkt = reinterpret_cast<InnoDataPacket *>(anglehv_table_.data());
+      anglehv_table_size_ = table_pkt->common.size;
+      inno_log_info("%s, Get Generic Compact Table", lidar_name_.c_str());
     }
   }
   bool is_next_frame = false;
@@ -271,14 +272,13 @@ int32_t SeyondDriver::process_scan_packet_(
     const InnoDataPacket *pkt =
         reinterpret_cast<const InnoDataPacket *>(packet.data().data());
     if ((param_.raw_packets_mode) && (!anglehv_table_init_) &&
-        (pkt->type == INNO_ROBINW_ITEM_TYPE_COMPACT_POINTCLOUD)) {
+        CHECK_CO_SPHERE_POINTCLOUD_DATA(pkt->type)) {
       if (packet.table_exist()) {
         anglehv_table_init_ = true;
-        anglehv_table_.resize(sizeof(InnoAngleHVTable) +
-                              sizeof(InnoDataPacket));
+        anglehv_table_.resize(packet.table().size());
         std::memcpy(anglehv_table_.data(), packet.table().data(),
-                    sizeof(InnoAngleHVTable) + sizeof(InnoDataPacket));
-        inno_log_info("Get RobinW Compact Table");
+                    packet.table().size());
+        inno_log_info("Get Generic Compact Table from scan packet");
       } else {
         return 0;
       }

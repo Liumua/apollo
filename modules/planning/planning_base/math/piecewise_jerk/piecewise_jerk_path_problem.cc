@@ -67,6 +67,14 @@ void PiecewiseJerkPathProblem::CalculateKernel(std::vector<c_float>* P_data,
                               (weight_ddx_ + weight_dddx_ / delta_s_square) /
                                   (scale_factor_[2] * scale_factor_[2]));
   ++value_index;
+
+  for (int i = 0; i < n - 1; ++i) {
+    columns[2 * n + i + 1].emplace_back(
+        2 * n + i, (-weight_dddx_ / delta_s_square) /
+                       (scale_factor_[2] * scale_factor_[2]));
+    ++value_index;
+  }
+
   for (int i = 1; i < n - 1; ++i) {
     columns[2 * n + i].emplace_back(
         2 * n + i, (weight_ddx_ + 2.0 * weight_dddx_ / delta_s_square) /
@@ -77,15 +85,7 @@ void PiecewiseJerkPathProblem::CalculateKernel(std::vector<c_float>* P_data,
       3 * n - 1,
       (weight_ddx_ + weight_dddx_ / delta_s_square + weight_end_state_[2]) /
           (scale_factor_[2] * scale_factor_[2]));
-  ++value_index;
-
-  // -2 * w_dddx / delta_s^2 * x(i)'' * x(i + 1)''
-  for (int i = 0; i < n - 1; ++i) {
-    columns[2 * n + i].emplace_back(2 * n + i + 1,
-                                    (-2.0 * weight_dddx_ / delta_s_square) /
-                                        (scale_factor_[2] * scale_factor_[2]));
-    ++value_index;
-  }
+  ++value_index; 
 
   CHECK_EQ(value_index, num_of_nonzeros);
 
@@ -287,6 +287,18 @@ void PiecewiseJerkPathProblem::CalculateOffset(std::vector<c_float>* q) {
                   scale_factor_[0];
     }
   }
+}
+
+OSQPSettings* PiecewiseJerkPathProblem::SolverDefaultSettings() {
+  // Define Solver default settings
+  OSQPSettings* settings =
+      reinterpret_cast<OSQPSettings*>(c_malloc(sizeof(OSQPSettings)));
+  osqp_set_default_settings(settings);
+  settings->polish = true;
+  settings->verbose = FLAGS_enable_osqp_debug;
+  settings->scaled_termination = true;
+  settings->time_limit = FLAGS_path_speed_osqp_setting_time_limit;
+  return settings;
 }
 
 }  // namespace planning
